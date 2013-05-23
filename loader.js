@@ -1,66 +1,52 @@
 $("#dict-button").click( function() {
-	function hideSpinner() {
-		$("#spinner")[0].style.display = "none";
-	}
+	// Clear out any existing content.
+	var unorderedList = $( "#dictionary" )[0];
+	unorderedList.innerHTML = "";
 
-	function showSpinner() {
-		$("#spinner")[0].style.display = "inline";
-	}
+	// Define our success handler. We're defining this here instead of as
+	// an anonymous function because its cleaner.
+	var succeeded = function( data ) {
+		console.log( "Loaded data; populating controls." );
 
-	function loadDataAsync() {
-		// We'll assume our data file is in the same directory.
-		var url = "words.json";
+		// We'll use this to hold on to all of our new list items.
+		var listItems = [];
 
-		// Declare event handler methods. It's cleaner to pass them in then it
-		// is to define them in line below.
-		function succeeded( data ) {
-			console.log( "Loaded data; populating!" );
-
-			// We'll define a function that will let use insert some data as a
-			// list item into an unordered list dom element.
-			function insertIntoListDOM( element, word ) {
-				var listItem = document.createElement("li");
-				listItem.innerHTML = word;
-				element.appendChild( listItem );
-			}
-
-			// Grab a reference to our DOM list element so we can push
-			// elements into it later. We'll also want to go ahead and
-			// clear it while we're at it.
-			var listElement = $("#dictionary")[0];
-			listElement.innerHTML = "";
-
-			// Create a "wrapped" version of the above function that we can
-			// just pass into our foreach.
-			function mutatorCallback( value, index, array ) {
-				insertIntoListDOM( listElement, value );
-			}
-
-			// Iterate over our data and push it into the DOM.
-			var that = this;
-			data.words.forEach( mutatorCallback, that );
+		// Now we'll iterate through the data we pulled and create
+		// list item DOM elements.
+		var mutatorCallback = function( value, index, array ) {
+			// Note: We're escaping the value here to prevent
+			// <marquee>YOLO</marquee> and other fun XSS tricks
+			// from showing up in our list.
+			var escapedValue = escape( value );
+			var listItemHTML = "<li>" + escapedValue + "</li>";
+			this.push( listItemHTML );
 		}
 
-		function failed( data )	{
-			console.log( "failed!" );
-		}
+		// Wrap the words in <li> tags and append them to our list of elements.
+		data.words.forEach( mutatorCallback, listItems );
 
-		// (Actually) make the request.
-		var params = {
+		// At this point, we've got a massive list containing dictionary
+		// items. Let's smoosh that down into a single string of HTML
+		// and set that as the inner content of our dictionary unordered
+		// list element.
+		var unorderedList = $( "#dictionary" )[0];
+		unorderedList.innerHTML = listItems.join( '' );
 
-		}
-
-		// Make the actual request.
-		$.getJSON( url )
-		.done(succeeded)
-		.fail( failed )
-		.always( hideSpinner );
+		// Indicate that we're done.
+		console.log( "Finished writing out list." );
 	}
 
-	// When the button is clicked, we should show the spinner in case it takes
-	// a long time for the json doc to load.
-	showSpinner();
+	// Define our failure handler. Done here for the same reasons as above.
+	var failed = function( data ) {
+		console.log( "Failed!" );
+	}
+	
+	// Define our endpoint.
+	var jsonDataUrl = "words.json";
+	console.log( "Making GET request against " + jsonDataUrl + "." );
 
-	// Kick off an async load.
-	loadDataAsync();
+	// Make the actual request.
+	$.getJSON( jsonDataUrl )
+	.done( succeeded )
+	.fail( failed );
 });
